@@ -1,0 +1,73 @@
+- hosts: all
+  gather_facts: false
+  become: yes
+  vars_files:
+    - ../env.yml
+  vars:
+    http_port: 80
+
+  tasks:
+    - name: Add PHP Repository
+      apt_repository:
+        repo: ppa:ondrej/php
+        state: present
+
+    - name: Update apt-get
+      apt:
+        update_cache: yes
+
+    - name: Install packages
+      apt:
+        name: "{{ item }}"
+      with_items:
+        - make
+        - git
+        - apache2
+        - php7.2-cli
+        - php7.2-curl
+        - php7.2-mbstring
+        - php7.2-bcmath
+        - php7.2-mysql
+        - php7.2-xml
+        - libapache2-mod-php7.2
+        - php7.2-gd
+        - php-mcrypt
+        - samba
+        - samba-client
+        - samba-common
+        - cifs-utils
+        - zip
+        - unzip
+        - php7.2-zip
+        - nodejs-legacy
+        - npm
+        - nfs-kernel-server
+
+    - name: create virtual host file
+      template: src=virtualhost.conf dest=/etc/apache2/sites-available/{{ domain }}.conf
+
+    - name: a2ensite {{ domain }}
+      command: a2ensite {{ domain }}
+
+    - name: "enable apashe modules"
+      apache2_module:
+          state: present
+          name: "{{item}}"
+      with_items:
+        - rewrite
+
+    - name: Create project Document Root
+      file: path=/var/www/html/{{ domain }} state=directory
+
+    - name: npm global install packages
+      npm: global=yes name={{item}}
+      with_items:
+        - node-sass
+        - gulp-cli
+        - gulp
+        - bower
+
+    - name: restart apache
+      service:
+        name: apache2
+        state: restarted
